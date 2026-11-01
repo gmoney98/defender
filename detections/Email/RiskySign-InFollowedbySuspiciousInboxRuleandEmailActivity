@@ -1,0 +1,26 @@
+//author: gmaney
+let threshold = 1h;
+//get riskysignins
+let RiskySignIns=
+SigninLogs
+| where UserType == 'Member'
+| where RiskLevelDuringSignIn != 'none'
+| where ResultType == 0
+| where RiskState == 'atRisk'
+| where ResourceIdentity == @"4765445b-32c6-49b0-83e6-1d93765276ca";//officehome
+//getriskyinboxrulecreation
+let RiskyRule=
+CloudAppEvents
+| extend RawEventData_SessionId = tostring(parse_json(RawEventData)["SessionId"])
+| join kind=inner RiskySignIns on $left.RawEventData_SessionId == $right.SessionId
+| extend LastSeenForUser_ActionType = parse_json(LastSeenForUser)["ActionType"]
+| where LastSeenForUser_ActionType == -1
+| where RawEventData.Parameters has_all ('DeleteMessage','StopProcessingRules')
+| where ActionType == @"New-InboxRule"
+| where Application == @"Microsoft Exchange Online"
+| project RuleCreationTime = TimeGenerated, AccountObjectId;
+//getsentmailfollowingrulecreation
+RiskyRule
+| join kind=inner EmailEvents on $left.AccountObjectId == $right.SenderObjectId
+| where TimeGenerated between (RuleCreationTime .. (RuleCreationTime + threshold))
+
