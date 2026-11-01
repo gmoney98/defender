@@ -6,8 +6,8 @@ SigninLogs
 | where UserType == 'Member'
 | where RiskLevelDuringSignIn != 'none'
 | where ResultType == 0
-| where RiskState == 'atRisk'
-| where ResourceIdentity == @"4765445b-32c6-49b0-83e6-1d93765276ca";//officehome
+//| where ResourceIdentity == @"4765445b-32c6-49b0-83e6-1d93765276ca";//officehome
+| where RiskState == 'atRisk';
 //getriskyinboxrulecreation
 let RiskyRule=
 CloudAppEvents
