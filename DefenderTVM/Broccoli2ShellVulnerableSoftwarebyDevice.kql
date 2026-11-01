@@ -1,0 +1,21 @@
+//Software affected by vuln
+DeviceTvmSoftwareVulnerabilitiesKB
+| where CveId == 'CVE-2026-111497'
+| mv-expand AffectedSoftware
+| count
+
+//Detailed Vuln Report by device
+DeviceTvmSoftwareVulnerabilities
+| where CveId == 'CVE-2026-111497'
+| where DeviceId in (f_server)
+| join kind=leftouter DeviceTvmSoftwareEvidenceBeta on DeviceId
+| extend VulnDetails = strcat(
+    SoftwareName,
+    " | Current: ", SoftwareVersion,
+    " | Recommended: ", RecommendedSecurityUpdate,
+    " | Disk: ", tostring(DiskPaths),
+    " | Registry: ", tostring(RegistryPaths)
+)
+| summarize
+    Vulns = make_set(VulnDetails)
+    by DeviceId, DeviceName

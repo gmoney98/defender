@@ -1,0 +1,6 @@
+DeviceTvmSecureConfigurationAssessment
+| join DeviceTvmSecureConfigurationAssessmentKB on ConfigurationId
+| where IsCompliant == 0 and IsApplicable == 1
+| where OSPlatform contains "Server"
+| summarize ConfigurationImpactScore =  sum(ConfigurationImpact), ImpactedConfiguration = make_set(ConfigurationName), ConfigID = make_set(ConfigurationId) by DeviceName
+| sort by ConfigurationImpactScore

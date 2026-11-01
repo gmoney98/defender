@@ -1,0 +1,11 @@
+let Alerts = AlertEvidence
+| where Title contains "OAuth application activity from an uncommonly visited ISP"
+| where EntityType == 'Ip'
+| project RemoteIP;
+CloudAppEvents
+| where IPAddress in ( Alerts)
+| mv-expand ActivityObjects
+| extend ActivityType = ActivityObjects.Type
+| where ActivityType == 'User'
+| extend User = tostring(ActivityObjects.Name)
+| distinct User, IPAddress

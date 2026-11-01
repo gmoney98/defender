@@ -1,0 +1,307 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "Recurrence": {
+                "recurrence": {
+                    "interval": 12,
+                    "frequency": "Hour",
+                    "timeZone": "Eastern Standard Time"
+                },
+                "evaluatedRecurrence": {
+                    "interval": 12,
+                    "frequency": "Hour",
+                    "timeZone": "Eastern Standard Time"
+                },
+                "type": "Recurrence"
+            }
+        },
+        "actions": {
+            "HTTP": {
+                "runAfter": {
+                    "Initialize_variable_-_indicators": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Http",
+                "inputs": {
+                    "uri": "https://feeds.sesv4.ren-isac.net/feed",
+                    "method": "GET",
+                    "headers": {
+                        "Accept": "application/vnd.cif.v3+json"
+                    },
+                    "queries": {
+                        "itype": "ipv4",
+                        "limit": "200",
+                        "nolog": "true",
+                        "confidence": "@{variables('confidence')}",
+                        "tags": "botnet,scanner,malware,exploit,bruteforce,honeypot,spam,hijacked"
+                    },
+                    "authentication": {
+                        "type": "Raw",
+                        "value": "Token token=<REDACTED-REN-ISAC-TOKEN>"
+                    }
+                },
+                "runtimeConfiguration": {
+                    "contentTransfer": {
+                        "transferMode": "Chunked"
+                    }
+                }
+            },
+            "Parse_HTTP_Body": {
+                "runAfter": {
+                    "HTTP": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ParseJson",
+                "inputs": {
+                    "content": "@body('HTTP')",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "message": {
+                                "type": "string"
+                            },
+                            "data": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "indicator": {
+                                            "type": "string"
+                                        },
+                                        "itype": {
+                                            "type": "string"
+                                        },
+                                        "tlp": {
+                                            "type": "string"
+                                        },
+                                        "provider": {
+                                            "type": "string"
+                                        },
+                                        "group": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        },
+                                        "tags": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "confidence": {
+                                            "type": "integer"
+                                        },
+                                        "uuid": {
+                                            "type": "string"
+                                        },
+                                        "cc": {
+                                            "type": "string"
+                                        },
+                                        "latitude": {
+                                            "type": "number"
+                                        },
+                                        "timezone": {
+                                            "type": "string"
+                                        },
+                                        "longitude": {
+                                            "type": "number"
+                                        },
+                                        "city": {
+                                            "type": "string"
+                                        },
+                                        "region": {
+                                            "type": "string"
+                                        },
+                                        "location": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "application": {
+                                            "type": "string"
+                                        },
+                                        "reference": {
+                                            "type": "string"
+                                        },
+                                        "portlist": {
+                                            "type": "string"
+                                        },
+                                        "protocol": {
+                                            "type": "string"
+                                        },
+                                        "asn": {
+                                            "type": "integer"
+                                        },
+                                        "asn_desc": {
+                                            "type": "string"
+                                        },
+                                        "firsttime": {
+                                            "type": "string"
+                                        },
+                                        "reporttime": {
+                                            "type": "string"
+                                        },
+                                        "lasttime": {
+                                            "type": "string"
+                                        },
+                                        "indicator_ipv4": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "indicator",
+                                        "itype",
+                                        "tlp",
+                                        "provider",
+                                        "group",
+                                        "count",
+                                        "tags",
+                                        "confidence",
+                                        "uuid",
+                                        "cc",
+                                        "latitude",
+                                        "timezone",
+                                        "longitude",
+                                        "location",
+                                        "asn",
+                                        "asn_desc",
+                                        "firsttime",
+                                        "reporttime",
+                                        "lasttime",
+                                        "indicator_ipv4"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "CIF_to_STIX": {
+                "runAfter": {
+                    "Parse_HTTP_Body": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Select",
+                "inputs": {
+                    "from": "@body('Parse_HTTP_Body')?['data']",
+                    "select": {
+                        "id": "indicator--@{item()?['uuid']}",
+                        "type": "indicator",
+                        "created": "@item()?['firsttime']",
+                        "modified": "@item()?['lasttime']",
+                        "description": "@item()?['asn_desc']",
+                        "external_reference": "@item()?['reference']",
+                        "confidence": "@mul(item()?['confidence'],10)",
+                        "labels": "@item()?['tags']",
+                        "valid_from": "@item()?['reporttime']",
+                        "pattern": "ipv4-addr:@{item()?['indicator_ipv4']}",
+                        "name": "@item()?['indicator']",
+                        "pattern_type": "stix",
+                        "spec_version": "2.1"
+                    }
+                }
+            },
+            "Initialize_variable_-_confidence": {
+                "runAfter": {},
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "confidence",
+                            "type": "integer",
+                            "value": 8
+                        }
+                    ]
+                }
+            },
+            "Initialize_variable_-_indicators": {
+                "runAfter": {
+                    "Initialize_variable_-_confidence": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "indicators",
+                            "type": "array"
+                        }
+                    ]
+                }
+            },
+            "Set_variable": {
+                "runAfter": {
+                    "CIF_to_STIX": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "SetVariable",
+                "inputs": {
+                    "name": "indicators",
+                    "value": "@body('CIF_to_STIX')"
+                }
+            },
+            "For_each": {
+                "foreach": "@chunk(variables('indicators'),100)",
+                "actions": {
+                    "Threat_Intelligence_-_Upload_Indicators_of_Compromise_(V2)_(Preview)": {
+                        "type": "ApiConnection",
+                        "inputs": {
+                            "host": {
+                                "connection": {
+                                    "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                }
+                            },
+                            "method": "post",
+                            "body": {
+                                "sourcesystem": "TI_REN-ISAC",
+                                "indicators": "@items('For_each')"
+                            },
+                            "path": "/V2/ThreatIntelligence/@{encodeURIComponent('<SENTINEL-WORKSPACE-ID>')}/UploadIndicators/"
+                        }
+                    }
+                },
+                "runAfter": {
+                    "Set_variable": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Foreach"
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        },
+        "metadata": {
+            "notes": {}
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "type": "Object",
+            "value": {
+                "azuresentinel": {
+                    "id": "/subscriptions/<SUBSCRIPTION-ID>/providers/Microsoft.Web/locations/northcentralus/managedApis/azuresentinel",
+                    "connectionId": "/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/<RESOURCE-GROUP>/providers/Microsoft.Web/connections/azuresentinel",
+                    "connectionName": "azuresentinel",
+                    "connectionProperties": {}
+                }
+            }
+        }
+    }
+}

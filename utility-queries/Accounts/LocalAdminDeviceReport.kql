@@ -1,0 +1,9 @@
+//Checks for local admin logons across environment and displays total logins and devices
+let svcaccounts = dynamic(['']);
+DeviceLogonEvents
+| where Timestamp >= ago(30d)  // last month
+| where IsLocalAdmin == 1
+| where AccountName !in (svcaccounts)
+// number of machines connected to by the account
+| summarize LoginCount=count(),DeviceCount=dcount(DeviceId),Devices=make_set(DeviceName) by AccountName
+| sort by DeviceCount desc

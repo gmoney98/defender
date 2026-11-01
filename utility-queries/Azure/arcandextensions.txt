@@ -1,0 +1,12 @@
+resources
+|where type =~ 'microsoft.hybridcompute/machines' and subscriptionId == '92acf187-c461-49de-ac78-5fcebaeac383'
+| extend id = toupper(id)
+| join kind=leftouter (
+resources
+| where type =~ "microsoft.hybridcompute/machines/extensions"
+| extend VMId = toupper(tostring(split(id, '/extensions/')[0]))
+| project
+        VMId,
+        ExtensionName = name,
+        ExtensionType = tostring(properties.type)
+) on $left.id == $right.VMId

@@ -1,0 +1,321 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "## Server Monitoring Dashboard\n---\n\nThe goal of this workbook is to monitor the various statuses of Servers for Security"
+      },
+      "name": "="
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "crossComponentResources": [
+          "{SubscriptionID}"
+        ],
+        "parameters": [
+          {
+            "id": "b2e37e53-1848-4b3c-8cc9-dcf10cb08326",
+            "version": "KqlParameterItem/1.0",
+            "name": "SubscriptionID",
+            "type": 6,
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "includeAll": false
+            },
+            "value": null
+          },
+          {
+            "id": "66f609d6-bf12-40c3-9c93-bd92d7deef66",
+            "version": "KqlParameterItem/1.0",
+            "name": "ResourceGroup",
+            "type": 2,
+            "isGlobal": true,
+            "query": "ResourceContainers\r\n| where type =~ \"microsoft.resources/subscriptions/resourcegroups\"\r\n| project value = name, label = name\r\n| sort by label asc",
+            "crossComponentResources": [
+              "{SubscriptionID}"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "value": null
+          }
+        ],
+        "style": "pills",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources"
+      },
+      "name": "parameters - 3"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "Heartbeat\r\n| where '{ResourceGroup}' == '' or ResourceGroup =~ \"{ResourceGroup}\"\r\n| where TimeGenerated >= ago(1d)\r\n| summarize arg_max(TimeGenerated, *) by _ResourceId\r\n| summarize DeviceCount = count()",
+              "size": 4,
+              "title": "Azure Monitor Heartbeats in last 24hr",
+              "timeContext": {
+                "durationMs": 86400000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "stat",
+              "tileSettings": {
+                "titleContent": {
+                  "columnMatch": "DeviceCount"
+                },
+                "showBorder": false
+              }
+            },
+            "customWidth": "33",
+            "name": "query - 0"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n|where type =~ 'microsoft.hybridcompute/machines'\r\n| where '{SubscriptionID}' == '' or subscriptionId =~ '{SubscriptionID:id}'\r\n|where '{ResourceGroup}' == '' or resourceGroup =~ \"{ResourceGroup}\"\r\n|count",
+              "size": 4,
+              "title": "Servers in Arc",
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "value::all"
+              ],
+              "visualization": "stat"
+            },
+            "customWidth": "33",
+            "name": "query - 2"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "DeviceInfo\r\n| where DeviceType == 'Server'\r\n| summarize arg_max(Timestamp, *) by DeviceId\r\n| count",
+              "size": 4,
+              "title": "Servers Discovered by Defender",
+              "timeContext": {
+                "durationMs": 86400000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "stat"
+            },
+            "customWidth": "33",
+            "name": "query - 2"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "Heartbeat\r\n| summarize arg_max(TimeGenerated, *) by _ResourceId\r\n| where '{ResourceGroup}' == '' or ResourceGroup =~ \"{ResourceGroup}\"\r\n| where TimeGenerated <= ago(1d)\r\n| summarize DeviceCount = count()",
+              "size": 4,
+              "title": "No Monitor Heartbeat in last 24 hrs",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "stat",
+              "sortBy": []
+            },
+            "customWidth": "33",
+            "name": "No Monitor Heartbeat in last 24 hrs"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n|where type =~ 'microsoft.hybridcompute/machines'\r\n| where '{SubscriptionID}' == '' or subscriptionId =~ '{SubscriptionID:id}'\r\n| where '{ResourceGroup}' == '' or resourceGroup =~ \"{ResourceGroup}\"\r\n| extend ArcStatus=tostring(properties.status)\r\n| where ArcStatus != 'Connected'\r\n| count",
+              "size": 4,
+              "title": "Arc Servers Not Connected",
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "value::all"
+              ],
+              "visualization": "stat"
+            },
+            "customWidth": "33",
+            "name": "query - 4"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "DeviceInfo\r\n| where TimeGenerated >= ago(30d)\r\n| where DeviceType == 'Server'\r\n| summarize arg_max(Timestamp, *) by DeviceId\r\n| where OnboardingStatus != 'Onboarded'\r\n| count",
+              "size": 4,
+              "title": "Servers not onboarded to Defender",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "stat"
+            },
+            "customWidth": "33",
+            "name": "query - 5"
+          }
+        ]
+      },
+      "name": "group - 4"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where type =~ 'microsoft.hybridcompute/machines' \r\n| where '{SubscriptionID}' == '' or subscriptionId =~ '{SubscriptionID:id}'\r\n| extend ArcStatus=tostring(properties.status)\r\n| extend CreationDate = tostring(properties.osInstallDate)\r\n| extend IpAddress = properties.networkProfile.ipAddresses[0].address\r\n| extend Tier = tostring(tags.Tier)\r\n//| extend OsType=tostring(properties.osType)\r\n| project\r\n    rID = toupper(id),\r\n    ArcName = name,\r\n    ResourceGroup = resourceGroup,\r\n    ArcStatus,\r\n    CreationDate,\r\n    Tier",
+        "size": 0,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 5000
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "showqueries",
+        "comparison": "isEqualTo",
+        "value": "true"
+      },
+      "name": "ArcMachines"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "DeviceInfo\r\n| where DeviceType == \"Server\"\r\n| summarize arg_max(TimeGenerated, *) by DeviceId\r\n| project\r\n    rID = toupper(AzureResourceId),\r\n    DeviceId,\r\n    DeviceName,\r\n    OnboardingStatus,\r\n    SensorHealthState,\r\n    OSPlatform,\r\n    OSVersion,\r\n    DefenderDiscovered = true",
+        "size": 0,
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "gridSettings": {
+          "rowLimit": 5000
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "showqueries",
+        "comparison": "isEqualTo",
+        "value": "true"
+      },
+      "name": "DefenderServers"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "{\"version\":\"Merge/1.0\",\"merges\":[{\"id\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\",\"mergeType\":\"outer\",\"leftTable\":\"ArcMachines\",\"rightTable\":\"DefenderServers\",\"leftColumn\":\"rID\",\"rightColumn\":\"rID\"}],\"projectRename\":[{\"originalName\":\"[ArcMachines].rID\",\"mergedName\":\"rID\",\"fromId\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\"},{\"originalName\":\"[DefenderServers].DeviceName\",\"mergedName\":\"DeviceName\",\"fromId\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\"},{\"originalName\":\"[ArcMachines].Tier\",\"mergedName\":\"Tier\",\"fromId\":\"unknown\"},{\"originalName\":\"[ArcMachines].CreationDate\",\"mergedName\":\"CreationDate\",\"fromId\":\"unknown\"},{\"originalName\":\"[ArcMachines].ResourceGroup\",\"mergedName\":\"ResourceGroup\",\"fromId\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\"},{\"originalName\":\"[ArcMachines].Arc\",\"mergedName\":\"Arc\",\"fromId\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\"},{\"originalName\":\"[DefenderServers].OnboardingStatus\",\"mergedName\":\"DefenderOnboardingStatus\",\"fromId\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\"},{\"originalName\":\"[DefenderServers].SensorHealthState\",\"mergedName\":\"DefenderSensorHealthState\",\"fromId\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\"},{\"originalName\":\"[DefenderServers].OSPlatform\",\"mergedName\":\"OSPlatform\",\"fromId\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\"},{\"originalName\":\"[DefenderServers].DefenderDiscovered\",\"mergedName\":\"DefenderDiscovered\",\"fromId\":\"3a8428ed-4c87-4e92-8fbb-2a0ece51b050\"},{\"originalName\":\"[ArcMachines].ArcStatus\",\"mergedName\":\"ArcStatus\",\"fromId\":\"unknown\"},{\"originalName\":\"[ArcMachines].OsType\",\"mergedName\":\"OsType\",\"fromId\":\"unknown\"},{\"originalName\":\"[DefenderServers].rID\"},{\"originalName\":\"[DefenderServers].DeviceId\"},{\"originalName\":\"[ArcMachines].ArcName\"},{\"originalName\":\"[DefenderServers].OSVersion\"},{\"originalName\":\"[ArcMachines].IpAddress\"}]}",
+        "size": 0,
+        "title": "Server Inventory",
+        "exportMultipleValues": true,
+        "exportedParameters": [
+          {
+            "fieldName": "rID",
+            "parameterName": "ServerIDParam",
+            "parameterType": 1
+          }
+        ],
+        "showExportToExcel": true,
+        "queryType": 7,
+        "visualization": "table",
+        "showExpandCollapseGrid": true,
+        "gridSettings": {
+          "rowLimit": 5000,
+          "filter": true
+        },
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "rID",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "rID",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto"
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "style": "decimal",
+                "maximumFractionDigits": 2,
+                "maximumSignificantDigits": 3
+              }
+            }
+          },
+          "showBorder": false
+        },
+        "statSettings": {
+          "valueField": "rID",
+          "valueAggregation": "Count",
+          "colorSettings": {
+            "type": "static",
+            "mode": "background",
+            "heatmapPalette": "greenRed",
+            "thresholdsGrid": []
+          },
+          "iconSettings": {
+            "thresholdsGrid": []
+          },
+          "tagText": "",
+          "valueFontStyle": "auto"
+        }
+      },
+      "name": "ArcDefMerged"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let ServerIDFilter = dynamic([{ServerIDParam}]);\nHeartbeat\n| where array_length(ServerIDFilter) == 0 or _ResourceId in~ (ServerIDFilter)\n| where '{ResourceGroup}' == '' or ResourceGroup =~ \"{ResourceGroup}\"\n| summarize arg_max(TimeGenerated, *) by _ResourceId\n| project Computer,ResourceGroup,ComputerIP, TimeGenerated",
+        "size": 1,
+        "title": "Azure Monitor Heartbeats",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table",
+        "gridSettings": {
+          "rowLimit": 500,
+          "filter": true
+        },
+        "graphSettings": {
+          "type": 0
+        }
+      },
+      "name": "MonitorHeartbeats"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n|where type =~ 'microsoft.hybridcompute/machines'\r\n//IF parameter is empty return everything ELSE does the parameter's quoted list contain this exact ID?\r\n| where '{ServerIDParam}' == '' or '{ServerIDParam}' contains strcat('\"', toupper(id), '\"')\r\n| where '{SubscriptionID}' == '' or subscriptionId =~ '{SubscriptionID:id}'\r\n| where '{ResourceGroup}' == '' or resourceGroup =~ \"{ResourceGroup}\"\r\n| extend id = toupper(id)\r\n| join kind=leftouter (\r\nresources\r\n| where type =~ \"microsoft.hybridcompute/machines/extensions\"\r\n| extend VMId = toupper(tostring(split(id, '/extensions/')[0]))\r\n| where tostring(properties.type) in ('MDE.Windows','MDE.Linux')\r\n| extend extensionstate= tostring(properties.provisioningState)\r\n| extend message = properties.instanceView.status.message\r\n| parse message with * '\"onboardingPackageOperationResultCode\":' * '\"' OnboardingResult '\"' *\r\n| project\r\n        VMId,\r\n        ExtensionName = name,\r\n        ExtensionType = tostring(properties.type),\r\n        extensionstate,\r\n        OnboardingResult)\r\non $left.id == $right.VMId\r\n| project id, resourceGroup, ExtensionType,extensionstate,OnboardingResult",
+        "size": 0,
+        "title": "Defender Extension",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "filter": true
+        },
+        "sortBy": []
+      },
+      "name": "ArcData"
+    }
+  ],
+  "fallbackResourceIds": [],
+  "fromTemplateId": "sentinel-UserWorkbook",
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

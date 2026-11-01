@@ -1,0 +1,8 @@
+DeviceBaselineComplianceProfiles
+| join DeviceBaselineComplianceAssessment on ProfileId
+| where OSPlatform contains "Server"
+| where IsCompliant == 0 and IsApplicable == 1 and IsExempt == 0
+| join kind=leftouter DeviceBaselineComplianceAssessmentKB on ConfigurationId 
+| summarize Devices= make_set(DeviceName), DeviceCount =count_distinct(DeviceId) by ConfigurationName, ConfigurationCategory
+| project-reorder ConfigurationCategory, ConfigurationName, DeviceCount, Devices
+| sort by DeviceCount asc

@@ -1,0 +1,13 @@
+DeviceBaselineComplianceProfiles
+| join DeviceBaselineComplianceAssessment on ProfileId
+| where OSPlatform contains "Server"
+| where IsCompliant == 0 and IsApplicable == 1 and IsExempt == 0
+| join kind=leftouter DeviceBaselineComplianceAssessmentKB on ConfigurationId
+| summarize configs = make_set(
+    pack(
+    "ConfigID",ConfigurationId,
+    "ConfigName",ConfigurationName,
+    "CurrentValue",CurrentValue,
+    "RecommendedValue",RecommendedValue
+)
+) by DeviceName

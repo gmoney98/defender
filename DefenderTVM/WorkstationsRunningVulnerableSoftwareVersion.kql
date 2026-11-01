@@ -1,0 +1,11 @@
+let fixedversions = '156.0.8078.73';
+let devices =
+DeviceInfo
+| where DeviceType == 'Workstation'
+| where OnboardingStatus == 'Onboarded'
+| project DeviceId;
+DeviceTvmSoftwareInventory
+| where DeviceId in (devices)
+| where SoftwareName in ('chrome','chrome_for_mac','chrome_for_linux')
+| where parse_version(SoftwareVersion) < parse_version(fixedversions)
+

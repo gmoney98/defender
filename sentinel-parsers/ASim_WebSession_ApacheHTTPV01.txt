@@ -1,0 +1,36 @@
+ApacheHTTPServer_CL
+| where RawData has_any ("GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH")
+| where not (RawData startswith "[")
+| extend EventProduct = 'httpd'
+        ,EventVendor = 'Apache'
+        ,EventSchemaVersion = '0.2.6'
+        ,EventSchema = 'WebSession'
+        ,EventOriginalType = 'AccessLog'
+        ,EventType = 'WebServerSession'
+        ,DvcIdType = "AzureResourceId"
+        ,EventData = split(RawData, '"')
+        ,EventStartTime = todatetime(replace_regex(replace_regex(extract(@'(\d{2}\/\w{3}\/\d{4}):(\d{2}\:\d{2}\:\d{2})',0,RawData),@'(\d{2}\/\w{3}\/\d{4}):(\d{2}\:\d{2}\:\d{2})', @'\1 \2'),@'\/', @'-'))
+        ,EventCount = int(1)
+        ,Dvc = tostring(split(_ResourceId, "/")[-1])
+| extend SubEventData0 = split(trim_start(@' ', (trim_end(@' ', tostring(EventData[0])))), ' ')
+        ,SubEventData1 = split(EventData[1], ' ')
+        ,SubEventData2 = split(trim_start(@' ', (trim_end(@' ', tostring(EventData[2])))), ' ')
+        ,HttpReferrer = iff(EventData[3] == "-", "", EventData[3])
+        ,HttpUserAgent = EventData[5]
+| extend Dst = tostring(SubEventData0[0])
+        ,SrcIpAddr = tostring(SubEventData0[1])
+        ,SrcUsername = iff(SubEventData0[2] == "-", "", SubEventData0[2])
+        ,HttpRequestMethod = tostring(SubEventData1[0])
+        ,Url = tostring(SubEventData1[1])
+        ,HttpVersion = extract(@'(.*)/(.*)',2,tostring(SubEventData1[2]))
+        ,EventResultDetails = tostring(SubEventData2[0])
+        ,HttpResponseBodyBytes = iff ( SubEventData2[1] == "-", "", SubEventData2[1])
+| extend EventResult = iff ( toint(EventResultDetails) < 400, "Success", "Failure")
+        ,HttpStatusCode = EventResultDetails
+        ,HttpHost = Dst
+        ,FileName = iff(HttpRequestMethod == "PUT" and EventResultDetails == "201" ,extract(@'(([^/]+)/?$)',1,Url) ,'')
+        ,FileContentType = iff(HttpRequestMethod == "PUT" and EventResultDetails == "201" ,extract(@'(.[0-9a-z]+$)',1,Url) ,'')
+        ,EventEndTime = TimeGenerated
+        ,DvcId = _ResourceId
+| project-away EventData, SubEventData0, SubEventData1, SubEventData2,_ResourceId,RawData,Type
+

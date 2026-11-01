@@ -1,0 +1,130 @@
+{
+    "version": "Notebook/1.0",
+    "items": [
+        {
+            "type": 1,
+            "content": {
+                "json": "## New workbook\n---\n\nWelcome to your new workbook.  This area will display text formatted as markdown.\n\n\nWe've included a basic analytics query to get you started. Use the `Edit` button below each section to configure it or add more sections."
+            },
+            "name": "text - 2",
+            "id": "54231e03-87cf-4188-91d4-3e79eb268b0d"
+        },
+        {
+            "id": "7a1df1e7-d079-4e56-a4cb-16298bf66177",
+            "type": 3,
+            "name": "query - 2",
+            "content": {
+                "version": "KqlItem/1.0",
+                "query": "{\n  \"version\": \"MsGraphEndpoint/1.0\",\n  \"path\": \"/v1.0/identityProtection/riskyUsers\",\n  \"method\": \"GET\",\n  \"urlParams\": [\n    {\n      \"key\": \"$filter\",\n      \"value\": \"risklevel eq 'high'\"\n    }\n  ],\n  \"transformers\": [\n    {\n      \"type\": \"jsonpath\",\n      \"settings\": {\n        \"tablePath\": \"$.value\",\n        \"columns\": [\n          {\n            \"path\": \"$.userDisplayName\",\n            \"columnid\": \"UserDisplayName\"\n          },\n          {\n            \"columnid\": \"UserPrincipalName\",\n            \"path\": \"$.userPrincipalName\"\n          },\n          {\n            \"path\": \"$.riskDetail\",\n            \"columnid\": \"RiskDetail\"\n          },\n          {\n            \"path\": \"$.riskLastUpdatedDateTime\",\n            \"columnid\": \"RiskLastUpdated\"\n          }\n        ]\n      }\n    }\n  ]\n}",
+                "size": 0,
+                "timeContext": {
+                    "durationMs": 86400000
+                },
+                "queryType": 14,
+                "crossComponentResources": [
+                    "/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/<RESOURCE-GROUP>/providers/Microsoft.OperationalInsights/workspaces/<LOG-ANALYTICS-WORKSPACE>"
+                ],
+                "title": "High Risk (Compromised) Users",
+                "gridSettings": {
+                    "sortBy": [
+                        {
+                            "itemKey": "RiskLastUpdated",
+                            "sortOrder": 2
+                        }
+                    ],
+                    "formatters": [
+                        {
+                            "columnMatch": "RiskLastUpdated",
+                            "formatter": 6
+                        }
+                    ]
+                },
+                "exportedParameters": [
+                    {
+                        "parameterType": 1,
+                        "fieldName": "UserPrincipalName",
+                        "parameterName": "UPNparam"
+                    },
+                    {
+                        "parameterType": 1,
+                        "fieldName": "RiskLastUpdated",
+                        "parameterName": "RiskLastUpdatedparam"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "3bf22490-1a9f-4575-845e-c979af8a61a2",
+            "type": 3,
+            "name": "query - 2",
+            "content": {
+                "version": "KqlItem/1.0",
+                "query": "AuditLogs\r\n| where TimeGenerated between ((datetime({RiskLastUpdatedparam})-7d)..datetime({RiskLastUpdatedparam})+7d)\r\n| extend UserPrincipalName = tostring(parse_json(tostring(InitiatedBy.user)).userPrincipalName)\r\n| where UserPrincipalName == tostring('{UPNparam}')\r\n| project TimeGenerated,OperationName,ResultReason,Result\r\n| sort by TimeGenerated asc",
+                "size": 0,
+                "queryType": 0,
+                "resourceType": "microsoft.operationalinsights/workspaces",
+                "crossComponentResources": [
+                    "/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/<RESOURCE-GROUP>/providers/Microsoft.OperationalInsights/workspaces/<LOG-ANALYTICS-WORKSPACE>"
+                ],
+                "visualization": "table",
+                "title": "UserAuditLog",
+                "gridSettings": {
+                    "sortBy": [
+                        {
+                            "itemKey": "TimeGenerated",
+                            "sortOrder": 1
+                        }
+                    ]
+                }
+            },
+            "conditionalVisibilities": [
+                {
+                    "parameterName": "UPNparam",
+                    "comparison": "isNotEqualTo",
+                    "value": ""
+                },
+                {
+                    "parameterName": "",
+                    "comparison": "isEqualTo",
+                    "value": ""
+                }
+            ]
+        },
+        {
+            "id": "fcbbdc7d-f392-4479-ac18-946dd1805ace",
+            "type": 3,
+            "name": "query - 3",
+            "content": {
+                "version": "KqlItem/1.0",
+                "query": "CloudAppEvents\r\n| where TimeGenerated between ((datetime({RiskLastUpdatedparam})-7d)..datetime({RiskLastUpdatedparam})+7d)\r\n| where Application == \"Microsoft Exchange Online\"\r\n| where ActionType == \"New-InboxRule\"\r\n| join IdentityInfo on AccountObjectId\r\n| where AccountUPN == '{UPNparam}'",
+                "size": 0,
+                "timeContext": {
+                    "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.operationalinsights/workspaces",
+                "crossComponentResources": [
+                    "/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/<RESOURCE-GROUP>/providers/Microsoft.OperationalInsights/workspaces/<LOG-ANALYTICS-WORKSPACE>"
+                ],
+                "title": "MailboxRuleCreation",
+                "visualization": "table"
+            },
+            "conditionalVisibilities": [
+                {
+                    "parameterName": "UPNparam",
+                    "comparison": "isNotEqualTo",
+                    "value": ""
+                }
+            ]
+        }
+    ],
+    "isLocked": false,
+    "styleSettings": {},
+    "fromTemplateId": "sentinel-UserWorkbook",
+    "context": {
+        "ownerId": "/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/<RESOURCE-GROUP>/providers/Microsoft.OperationalInsights/workspaces/<LOG-ANALYTICS-WORKSPACE>"
+    },
+    "fallbackResourceIds": [
+        "/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/<RESOURCE-GROUP>/providers/Microsoft.OperationalInsights/workspaces/<LOG-ANALYTICS-WORKSPACE>"
+    ]
+}

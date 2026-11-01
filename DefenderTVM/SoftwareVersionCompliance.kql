@@ -1,0 +1,21 @@
+let tNewest = datatable(MinimalVersion:string, SoftwareNameT:string)
+[
+    "156.0.4314.56", "edge_chromium-based",
+    "156.0.8078.78", "chrome"
+];
+DeviceTvmSoftwareInventory
+| where OSPlatform startswith "WindowsServer"
+| join kind=inner tNewest on $left.SoftwareName == $right.SoftwareNameT
+| extend Status = case(
+    isnull(parse_version(SoftwareVersion)) or isnull(parse_version(MinimalVersion)), "Unknown",
+    parse_version(SoftwareVersion) < parse_version(MinimalVersion), "Update Needed",
+    "OK"
+)
+| summarize Softwares = make_set(
+        pack(
+        "SoftwareName",SoftwareName,
+        "SoftwareVersion",SoftwareVersion,
+        "MinimumVersion",MinimalVersion,
+        "Status",Status
+    )
+) by DeviceName 

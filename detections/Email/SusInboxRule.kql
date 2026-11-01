@@ -1,0 +1,6 @@
+CloudAppEvents
+| where Application == "Microsoft Exchange Online"
+| where ActionType == "New-InboxRule"
+| where RawEventData.Parameters has_all ('DeleteMessage','StopProcessingRules')
+| where array_length( RawEventData.Parameters) <= 5
+| distinct AccountDisplayName, AccountObjectId

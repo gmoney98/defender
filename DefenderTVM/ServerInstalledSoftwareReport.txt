@@ -1,0 +1,6 @@
+let Servers=DeviceInfo | where DeviceType == @"Server"
+| where OnboardingStatus == "Onboarded"
+| summarize arg_max(Timestamp, *) by DeviceId;
+DeviceTvmSoftwareInventory
+| where DeviceId in (Servers)
+| summarize Software=make_set(SoftwareName) by DeviceName

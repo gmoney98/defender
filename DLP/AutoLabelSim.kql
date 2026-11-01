@@ -1,0 +1,5 @@
+CloudAppEvents
+| where ActionType == @"AutoSensitivityLabelRuleMatch"
+| extend RuleName=RawEventData.ExecutionRuleName,Label=RawEventData.PolicyName,MatchedItem=RawEventData.ItemName,RuleMode=RawEventData.RuleMode
+| project-away ActionType, ApplicationId, AppInstanceId, AccountObjectId, IsAdminOperation,ObjectType,ObjectName,ReportId,AdditionalFields,AuditSource,UncommonForUser,LastSeenForUser,AccountId,IsImpersonated
+| where Label == 'High (Orange)'

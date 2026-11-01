@@ -1,0 +1,13 @@
+//Define RecipientCount threshold
+let threshold = 250;
+let timeframe = 30d;
+//Define Known Exclusions
+let excludeddomains = dynamic(['wcu.edu','email.wcu.edu','safecolleges.com']);
+let excludedsenders = dynamic(['thehelm@assetliving.com','thehusk@assetliving.com','huskandhelm@gmail.com']);
+//Search for bulk mail with same subject, different sender
+   EmailEvents
+    | where isnotempty(Subject) and DeliveryAction == "Delivered"
+    | where SenderFromDomain !in (excludeddomains)
+    | where SenderFromAddress !in (excludedsenders)
+    | summarize RecipientCount=dcount(RecipientEmailAddress), Senders = make_set(SenderFromAddress) by Subject, bin(Timestamp, timeframe)
+    | where RecipientCount > threshold and array_length(Senders) > 1

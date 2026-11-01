@@ -1,0 +1,7 @@
+DeviceBaselineComplianceProfiles
+| join DeviceBaselineComplianceAssessment on ProfileId
+| where OSPlatform contains "Server"
+| where IsCompliant == 0 and IsApplicable == 1 and IsExempt == 0
+| join kind=leftouter DeviceBaselineComplianceAssessmentKB on ConfigurationId 
+| summarize ConfigsImpacted = make_set(ConfigurationName), Devices= make_set(DeviceName), DeviceCount =count_distinct(DeviceId), ConfigCount =count_distinct(ConfigurationId) by ConfigurationCategory
+| sort by ConfigCount, DeviceCount
