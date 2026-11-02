@@ -21,4 +21,5 @@ EmailEvents
 | where ReportCount >= threshold;
 EmailEvents
 | join kind=inner ReportedMessages on $left.SenderFromAddress == $right.OGSender, $left.Subject == $right.OGSubject
-| where LatestDeliveryAction == @'Inbox/folder'
+| where LatestDeliveryLocation == @'Inbox/folder'
+| where OrgLevelPolicy != 'SecOps Mailbox'
