@@ -1,0 +1,24 @@
+//author:gmaney
+//Minimum number of reports required
+let threshold = 2;
+//Known sender/subject combinations to exclude
+let exclusions = dynamic(["Sender:quarantine@messaging.microsoft.com|Subject:Microsoft 365 security: You have messages in quarantine"]);
+//Mailbox receiving reported messages
+let EmailReportMailbox = '<INSERTREPORTMAILBOXHERE>';
+//Report classifications to include
+//Consider excluding "Junk" if nuisance reports create excessive noise
+let ReportedClass = dynamic(["Junk","Phishing"]);
+let ReportedMessages =
+EmailEvents
+| where OrgLevelPolicy == 'SecOps Mailbox'
+| where RecipientEmailAddress == EmailReportMailbox
+//parse the subject into classification,sender, and original subject
+| parse Subject with Classification":" * "|" OGSender "|" "("OGSubject")"*
+| where Classification in (ReportedClass)
+| extend counterID = strcat("Sender:",OGSender,"|","Subject:",OGSubject)
+| where counterID !in (exclusions)
+| summarize ReportCount = count() by counterID, OGSender, OGSubject
+| where ReportCount >= threshold;
+EmailEvents
+| join kind=inner ReportedMessages on $left.SenderFromAddress == $right.OGSender, $left.Subject == $right.OGSubject
+| where LatestDeliveryAction == @'Inbox/folder'
