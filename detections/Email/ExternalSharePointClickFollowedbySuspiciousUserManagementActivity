@@ -1,5 +1,5 @@
 //author:gmaney
-let trustedDomains = dynamic(["catamountwcu","catamountwcu-my"]);
+let trustedDomains = dynamic(["<Comma separated list of excluded domains - what comes after https:// but before .sharepoint>"]);
 let authWindow = 5m;
 let registrationWindow = 5m;
 let sharepointClicks =
