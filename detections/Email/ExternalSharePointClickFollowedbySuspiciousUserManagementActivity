@@ -1,0 +1,48 @@
+//author:gmaney
+let trustedDomains = dynamic(["catamountwcu","catamountwcu-my"]);
+let authWindow = 5m;
+let registrationWindow = 5m;
+let sharepointClicks =
+UrlClickEvents
+| where ActionType == 'ClickAllowed'
+| where Url contains "sharepoint.com"
+| parse Url with * "//"SharepointDomain"."*
+| where SharepointDomain !in (trustedDomains)
+| extend AccountUpn = tolower(AccountUpn)
+| project AccountUpn,clickTime = Timestamp,Url,clickIP=IPAddress;
+let clickUsers =
+sharepointClicks
+| distinct AccountUpn;
+let temporalSignins=
+SigninLogs
+| where ResultType == 0
+| extend UserPrincipalName = tolower(UserPrincipalName)
+| where UserPrincipalName in (clickUsers)
+| join kind=inner sharepointClicks on $left.UserPrincipalName == $right.AccountUpn
+| where CreatedDateTime between ((clickTime) .. (clickTime + authWindow))
+| where IPAddress != clickIP
+| project
+    AccountUpn,
+    SignInTime = CreatedDateTime,
+    SignInIPAddress = IPAddress,
+    clickIP,
+    clickTime,
+    Url;
+let AuditEvents =
+AuditLogs
+| where Result =~ "success"
+| where Category == @"UserManagement"
+|extend auditUserPrincipalName =
+            tolower(tostring(TargetResources[0].userPrincipalName)),
+        InitiatedBy_UserPrincipalName =
+            tolower(tostring(InitiatedBy.user.userPrincipalName))
+| where isnotempty(auditUserPrincipalName)
+| where auditUserPrincipalName in (clickUsers)
+| where auditUserPrincipalName == InitiatedBy_UserPrincipalName
+ | project
+        auditUserPrincipalName,
+        AuditEventTime = TimeGenerated,
+        OperationName;
+AuditEvents
+| join kind=inner temporalSignins on $left.auditUserPrincipalName == $right.AccountUpn
+| where AuditEventTime between (SignInTime .. (SignInTime + registrationWindow))
